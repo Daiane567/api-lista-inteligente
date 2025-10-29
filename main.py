@@ -4,15 +4,13 @@ from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import SessionLocal, engine, Base
 
-# Cria todas as tabelas no banco
+# Cria todas as tabelas no mesmo engine (necessário para memória)
 Base.metadata.create_all(bind=engine)
 
 # Inicializa FastAPI
 app = FastAPI(title="To-Do List Inteligente")
 
-# -------------------
 # Configuração CORS
-# -------------------
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -27,9 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------
 # Sessão do banco
-# -------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -37,9 +33,7 @@ def get_db():
     finally:
         db.close()
 
-# -------------------
 # Rotas da API
-# -------------------
 @app.get("/tasks", response_model=list[schemas.Task])
 def read_tasks(db: Session = Depends(get_db)):
     return crud.get_tasks(db)

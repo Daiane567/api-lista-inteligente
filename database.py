@@ -2,13 +2,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# URL do SQLite temporário em memória
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"  # só enquanto a instância está rodando
+# SQLite temporário em memória (somente durante o processo)
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
 # Cria o engine
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}  # necessário só para SQLite
+    connect_args={"check_same_thread": False}  # necessário para SQLite
 )
 
 # Sessão do SQLAlchemy
