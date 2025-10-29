@@ -1,24 +1,68 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
+import models, schemas, crud
+from database import SessionLocal, engine, Base
 
-# Carrega o .env de outra pasta
-dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", ".env")
-load_dotenv(dotenv_path)
+# Cria todas as tabelas no banco
+Base.metadata.create_all(bind=engine)
 
-# Pega a URL do banco do .env
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./tasks.db")
+# Inicializa FastAPI
+app = FastAPI(title="To-Do List Inteligente")
 
-# Cria o engine do SQLAlchemy
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+# -------------------
+# Configuração CORS
+# -------------------
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://taskhub-n91gzf9g8-daianes-projects-4a04bd25.vercel.app"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,      # quem pode acessar
+    allow_credentials=True,
+    allow_methods=["*"],        # GET, POST, PUT, DELETE, OPTIONS
+    allow_headers=["*"],        # cabeçalhos permitidos
 )
 
-# Sessão do SQLAlchemy
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# -------------------
+# Sessão do banco
+# -------------------
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-# Base para modelos
-Base = declarative_base()
+# -------------------
+# Rotas da API
+# -------------------
+@app.get("/tasks", response_model=list[schemas.Task])
+def read_tasks(db: Session = Depends(get_db)):
+    return crud.get_tasks(db)
+
+@app.post("/tasks", response_model=schemas.Task)
+def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    return crud.create_task(db, task)
+
+@app.put("/tasks/{task_id}", response_model=schemas.Task)
+def update_task(task_id: int, task: schemas.TaskCreate, db: Session = Depends(get_db)):
+    updated = crud.update_task(db, task_id, task.dict())
+    if not updated:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return updated
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: int, db: Session = Depends(get_db)):
+    deleted = crud.delete_task(db, task_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"ok": True}
+
+# Rota teste
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
