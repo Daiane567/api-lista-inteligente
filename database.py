@@ -1,68 +1,18 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
-import models, schemas, crud
-from database import SessionLocal, engine, Base
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-# Cria todas as tabelas no banco
-Base.metadata.create_all(bind=engine)
+# URL do SQLite temporário em memória
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"  # só enquanto a instância está rodando
 
-# Inicializa FastAPI
-app = FastAPI(title="To-Do List Inteligente")
-
-# -------------------
-# Configuração CORS
-# -------------------
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://taskhub-n91gzf9g8-daianes-projects-4a04bd25.vercel.app"
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,      # quem pode acessar
-    allow_credentials=True,
-    allow_methods=["*"],        # GET, POST, PUT, DELETE, OPTIONS
-    allow_headers=["*"],        # cabeçalhos permitidos
+# Cria o engine
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}  # necessário só para SQLite
 )
 
-# -------------------
-# Sessão do banco
-# -------------------
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Sessão do SQLAlchemy
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# -------------------
-# Rotas da API
-# -------------------
-@app.get("/tasks", response_model=list[schemas.Task])
-def read_tasks(db: Session = Depends(get_db)):
-    return crud.get_tasks(db)
-
-@app.post("/tasks", response_model=schemas.Task)
-def create_task(task: schemas.TaskCreate, db: Session = Depends(get_db)):
-    return crud.create_task(db, task)
-
-@app.put("/tasks/{task_id}", response_model=schemas.Task)
-def update_task(task_id: int, task: schemas.TaskCreate, db: Session = Depends(get_db)):
-    updated = crud.update_task(db, task_id, task.dict())
-    if not updated:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return updated
-
-@app.delete("/tasks/{task_id}")
-def delete_task(task_id: int, db: Session = Depends(get_db)):
-    deleted = crud.delete_task(db, task_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Task not found")
-    return {"ok": True}
-
-# Rota teste
-@app.get("/ping")
-def ping():
-    return {"message": "pong"}
+# Base para modelos
+Base = declarative_base()
