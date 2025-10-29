@@ -22,7 +22,7 @@ origins = [
 ]
 
 # Para produção, descomente e substitua pelo domínio real do front
-origins = ["*"]
+origins = ["https://taskhub-n91gzf9g8-daianes-projects-4a04bd25.vercel.app/"]
 
 app.add_middleware(
     CORSMiddleware,
