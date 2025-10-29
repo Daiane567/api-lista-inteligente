@@ -4,23 +4,37 @@ from sqlalchemy.orm import Session
 import models, schemas, crud
 from database import SessionLocal, engine, Base
 
-# Tabelas
+# Cria todas as tabelas no banco
 Base.metadata.create_all(bind=engine)
 
+# Inicializa FastAPI
 app = FastAPI(title="To-Do List Inteligente")
 
-# CORS para React
-origins = ["http://localhost:3000"]
+# -------------------
+# Configuração CORS
+# -------------------
+# Para desenvolvimento local: permite várias portas do React
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+# Para produção, descomente e substitua pelo domínio real do front
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,      # quem pode acessar
     allow_credentials=True,
-    allow_methods=["*"],  # GET, POST, PUT, DELETE, OPTIONS
-    allow_headers=["*"],
+    allow_methods=["*"],        # GET, POST, PUT, DELETE, OPTIONS
+    allow_headers=["*"],        # quais cabeçalhos são permitidos
 )
 
-# Sessão DB
+# -------------------
+# Sessão do banco
+# -------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -28,7 +42,10 @@ def get_db():
     finally:
         db.close()
 
-# Rotas
+# -------------------
+# Rotas da API
+# -------------------
+
 @app.get("/tasks", response_model=list[schemas.Task])
 def read_tasks(db: Session = Depends(get_db)):
     return crud.get_tasks(db)
@@ -50,3 +67,8 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     if not deleted:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"ok": True}
+
+# Rota teste para verificar se a API está funcionando
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
